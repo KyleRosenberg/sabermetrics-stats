@@ -1,7 +1,8 @@
 "use strict";
 
 $(document).ready(function() {
-   console.log('Hello World!');
+   console.log('Hello Sabermetrites!');
+   $('.ui.dropdown').dropdown();
 });
 
 function showError(message){

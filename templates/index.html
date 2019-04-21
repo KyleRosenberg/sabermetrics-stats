@@ -10,7 +10,45 @@
 
 <body>
 
-    Test
+    {{ top_bar }}
+
+    <div class="main_content">
+        <div class="stat_bar">
+            <h2>Stats</h2>
+            <div style="margin-bottom:4%;" class="ui fluid selection dropdown">
+                <input type="hidden" name="stat_group">
+                <div style="color:#000)" class="default text">Pitchers</div>
+                <i class="dropdown icon"></i>
+                <div class="menu">
+                    <div class="item" data-value="p">
+                        Pitchers
+                    </div>
+                    <div class="item" data-value="b">
+                        Batters
+                    </div>
+                    <div class="item" data-value="f">
+                        Fielders
+                    </div>
+                </div>
+            </div>
+            <div id="stat_container">
+            {% for stat in stats %}
+                <div class="stat_item">
+                    <button class="ui icon button" name="btn_{{ stat }}">
+                        <i class="green plus circle icon"></i>
+                    </button>
+                    <label>{{ stat }}</label>
+                </div>
+            {% endfor %}
+            </div>
+        </div>
+        <div class="active_bar">
+            <h2>Active Stats</h2>
+            <div id="stat_container">
+
+            </div>
+        </div>
+    </div>
 
 </body>
 
