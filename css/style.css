@@ -78,3 +78,33 @@ h1, h2, h3, h4, h5, h6 {
     float:right;
     padding: 1%;
 }
+
+.active_bar .ui.input{
+    max-width:4em;
+}
+
+.center_content{
+    width: 60%;
+    height: 93%;
+    left: 20%;
+    position: absolute;
+    padding-top:2%;
+    text-align: center;
+}
+
+.equation_box{
+    width: 50vh;
+    height: 20vh;
+    position: relative;
+    background-color: rgb(226, 226, 226);
+    margin: auto;
+    border-radius: 2%;
+    margin-top: 5%;
+    padding: 5vh 0;
+    font-size: 3vh;
+    overflow-x: scroll;
+}
+
+.equation_box .MJXc-display{
+    margin: auto;
+}

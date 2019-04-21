@@ -16,7 +16,7 @@
         <div class="stat_bar">
             <h2>Stats</h2>
             <div style="margin-bottom:4%;" class="ui fluid selection dropdown">
-                <input type="hidden" name="stat_group">
+                <input type="hidden" name="stat_group" value="p">
                 <div style="color:#000)" class="default text">Pitchers</div>
                 <i class="dropdown icon"></i>
                 <div class="menu">
@@ -46,6 +46,22 @@
             <h2>Active Stats</h2>
             <div id="stat_container">
 
+            </div>
+        </div>
+        <div class="center_content">
+            <div class="ui label">
+                Name Your Stat:
+            </div><br/>
+            <div class="ui input">
+                <input id="stat_name" type="text" placeholder="Stat Name" value="My Stat">
+            </div>
+            <div class="equation_box">
+                $${1 \over 1}$$
+            </div>
+            <div class="ui buttons">
+                <button class="ui disabled button">Save Stat</button>
+                <div class="or"></div>
+                <button id="btn_visualize" class="ui positive button">Visualize</button>
             </div>
         </div>
     </div>
