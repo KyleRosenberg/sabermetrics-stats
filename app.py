@@ -112,7 +112,6 @@ def visualize():
         return 'Stat name not provided', 400
     name = request.form['name']
     dfStats = buildDataframe(json.loads(equation), group, name)
-    print(dfStats[name].max())
     dist = getDistribution(dfStats, name)
     return render_template('visualize.html', result=dist.decode('utf8'))
 

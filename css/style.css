@@ -93,7 +93,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .equation_box{
-    width: 50vh;
+    width: 50vw;
     height: 20vh;
     position: relative;
     background-color: rgb(226, 226, 226);
