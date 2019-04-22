@@ -1,5 +1,6 @@
 let arr_all_stats = [];
-let dic_act_stats = {};
+let dic_default_act = { 'const': 1 }
+let dic_act_stats = $.extend(true, {}, dic_default_act);
 
 $(document).ready(function(event) {
     console.log('Sandbox ready!');
@@ -13,6 +14,7 @@ $(document).ready(function(event) {
         onChange: getGroupInfo
     });
     $('#btn_visualize').click(submitStat);
+    updateActiveStats();
 });
 
 function addStat() {
@@ -38,7 +40,19 @@ function removeStat() {
 function updateActiveStats() {
     let cont = $('.active_bar #stat_container');
     cont.empty();
+    cont.append(`<div class="stat_item">
+        <button class="ui icon button" name="btn_const">
+            <i class="red minus circle icon"></i>
+        </button>
+        <label>Constant:</label>
+        <div class="ui input">
+            <input type="number" name="coef_const" value="${dic_act_stats['const']}">
+        </div>
+    </div>`)
     for (stat in dic_act_stats) {
+        if (stat=='const'){
+            continue;
+        }
         info = dic_act_stats[stat];
         cont.append(`<div class="stat_item">
             <button class="ui icon button" name="btn_${stat}">
@@ -60,17 +74,21 @@ function updateActiveStats() {
 
 function updateNumbers() {
     let name = $(this)[0].name;
-    let index = 0;
-    if (name.startsWith('exp_')) {
-        index = 1;
-        name = name.substring(4);
+    if (name=='coef_const'){
+        dic_act_stats['const'] = parseFloat($(this).val());
     } else {
-        index = 0;
-        name = name.substring(5);
+        let index = 0;
+        if (name.startsWith('exp_')) {
+            index = 1;
+            name = name.substring(4);
+        } else {
+            index = 0;
+            name = name.substring(5);
+        }
+        let entry = dic_act_stats[name];
+        entry[index] = parseFloat($(this).val());
+        dic_act_stats[name] = entry;
     }
-    let entry = dic_act_stats[name];
-    entry[index] = parseFloat($(this).val());
-    dic_act_stats[name] = entry;
     renderEquation();
 }
 
@@ -88,7 +106,7 @@ function updateAllStats(clearActive = true) {
     }
     $('.stat_bar .stat_item .ui.icon.button').click(addStat);
     if (clearActive) {
-        dic_act_stats = {};
+        dic_act_stats = $.extend(true, {}, dic_default_act);
         updateActiveStats();
     }
 }
@@ -116,6 +134,7 @@ function renderEquation() {
     let denominator = {};
     //First pass to separate
     for (stat in dic_act_stats) {
+        if (stat=='const') continue;
         let entry = dic_act_stats[stat];
         if (entry[1] > 0) {
             numerator[stat] = entry.slice();
@@ -133,7 +152,7 @@ function renderEquation() {
         denom_string = denom_string.slice(0, -3);
     }
     $('.equation_box').empty();
-    $('.equation_box').append(`$$\{${numer_string}\\over${denom_string}\}$$`);
+    $('.equation_box').append(`$$\{\{${numer_string}\\over${denom_string}\} + ${dic_act_stats['const']}\}$$`);
     MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
 }
 

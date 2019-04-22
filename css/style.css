@@ -53,7 +53,6 @@ h1, h2, h3, h4, h5, h6 {
 .stat_bar .stat_item .ui.icon.button, .active_bar .stat_item .ui.icon.button{
     padding:0px;
     float:right;
-    pointer-events: auto;
 }
 
 .stat_bar label, .active_bar label{
@@ -68,7 +67,6 @@ h1, h2, h3, h4, h5, h6 {
 .stat_item{
     width:100%;
     margin: 3%;
-    pointer-events: none;
 }
 
 .active_bar{
@@ -81,6 +79,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .active_bar .ui.input{
     max-width:4em;
+    z-index: 999;
 }
 
 .center_content{

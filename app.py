@@ -126,7 +126,7 @@ def default():
         stats=PITCHING_DATA.columns.values[7:]
     )
 
-def calculateNewStat(df, equation, name):
+def calculateNewStat(df, equation, name, constant):
     numerator = []
     denominator = []
     for e in equation.keys():
@@ -143,10 +143,11 @@ def calculateNewStat(df, equation, name):
         df['Denominator'] = 1
     else:
         df['Denominator'] = df[denominator].sum(axis=1)
-    df[name] = df['Numerator']/df['Denominator']
+    df[name] = (df['Numerator']/df['Denominator'])+constant
     return df
 
 def buildDataframe(equation, group, name):
+    constant = equation.pop('const')
     df = None
     if group=='p':
         df = PITCHING_DATA
@@ -159,11 +160,12 @@ def buildDataframe(equation, group, name):
         sname = re.sub(r'\d+$', '', e)
         nums = equation[e]
         dfStats[e] = nums[0] * (df[sname]**abs(nums[1]))
-    dfRet = calculateNewStat(dfStats, equation, name)
+    dfRet = calculateNewStat(dfStats, equation, name, constant)
     return dfRet
 
 def getDistribution(df, name):
-    plt.hist(df[name], density=True)
+    dfNoOutliers = df[df[name]<df[name].quantile(0.95)]
+    plt.hist(dfNoOutliers[name], density=True)
     plt.title('Custom Stat: ' + name)
     plt.ylabel('Frequency')
     plt.xlabel('Stat Value')
@@ -171,9 +173,8 @@ def getDistribution(df, name):
     from io import BytesIO
     figfile = BytesIO()
     plt.savefig(figfile, format='png')
-    figfile.seek(0)  # rewind to beginning of file
+    figfile.seek(0)
     import base64
-    #figdata_png = base64.b64encode(figfile.read())
     figdata_png = base64.b64encode(figfile.getvalue())
     plt.clf()
     return figdata_png
