@@ -39,6 +39,14 @@ function removeStat() {
     updateActiveStats()
 }
 
+function modifyStat(){
+    let name = $(this)[0].name.substring(4);
+    let equation = dic_sav_stats[name];
+    dic_act_stats = equation;
+    $('#stat_name')[0].value = name;
+    updateActiveStats();
+}
+
 function updateActiveStats() {
     let cont = $('.active_bar #stat_container');
     cont.empty();
@@ -99,14 +107,21 @@ function updateAllStats(clearActive = true) {
     cont.empty();
     for (let i = 0; i < arr_all_stats.length; i++) {
         stat = arr_all_stats[i]
-        cont.append(`<div class="stat_item">
-            <button class="ui icon button" name="btn_${stat}">
+        let div_string = `<div class="stat_item">`;
+        div_string += `<button class="ui icon button add" name="btn_${stat}">
                 <i class="green plus circle icon"></i>
             </button>
-            <label>${stat}</label>
-        </div>`)
+            <label>${stat}</label>`;
+        if (stat in dic_sav_stats){
+            div_string += `<button class="ui icon button mod" name="mod_${stat}">
+                    <i class="edit icon"></i>
+                </button>`;
+        }
+        div_string += '</div>';
+        cont.append(div_string);
     }
-    $('.stat_bar .stat_item .ui.icon.button').click(addStat);
+    $('.stat_bar .stat_item .ui.icon.button.add').click(addStat);
+    $('.stat_bar .stat_item .ui.icon.button.mod').click(modifyStat);
     if (clearActive) {
         dic_act_stats = $.extend(true, {}, dic_default_act);
         updateActiveStats();
@@ -198,5 +213,6 @@ function saveStat(){
     if (arr_all_stats.indexOf(name)==-1){
         arr_all_stats.push(name);
     }
+    $('#stat_name')[0].value = "My Stat";
     updateAllStats();
 }

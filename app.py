@@ -13,12 +13,17 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import pandas as pd
 
-def rightData(df):
+def rightData(df, group=None):
     dfRet = df.loc[df['yearID']>2006].dropna()
+    if group=='p':
+        dfRet['FIP'] = (13*dfRet['HR'] + 3*(dfRet['BB']+dfRet['IBB']) - 2*dfRet['SO'])/(dfRet['IPouts']/3) + 3.2
+    if group=='b':
+        dfRet['1B'] = dfRet['H'] - dfRet['2B'] - dfRet['3B'] - dfRet['HR']
+        dfRet['wOBA'] = (0.69*(dfRet['BB']-dfRet['IBB']) + 0.72*dfRet['HBP'] + 0.89*dfRet['1B'] + 1.27*dfRet['2B'] + 1.62*dfRet['3B'] + 2.1*dfRet['HR'])/(dfRet['AB']+dfRet['BB']-dfRet['IBB']+dfRet['SF']+dfRet['HBP'])
     return dfRet
 
-PITCHING_DATA = rightData(pitching())
-BATTING_DATA = rightData(batting())
+PITCHING_DATA = rightData(pitching(), 'p')
+BATTING_DATA = rightData(batting(), 'b')
 FIELDING_DATA = rightData(fielding())
 TEAM_DATA = rightData(teams())
 
@@ -141,7 +146,6 @@ def calculateNewStat(df, equation, name, constant):
             numerator.append(e)
         else:
             denominator.append(e)
-    print(equation, numerator, denominator, name)
     if len(numerator)==0:
         df['Numerator'] = 1
     else:
@@ -164,13 +168,15 @@ def hasAllStats(df, equation):
 
 def calculateCustomStats(df, equation, customs, all_stats):
     leftover_stats = []
-    for s in all_stats:
+    for s in list(customs.keys()):
         sname = re.sub(r'\d+$', '', s)
         if sname in customs:
             new_equation = customs[sname]
             if hasAllStats(df, new_equation):
                 constant = new_equation.pop('const')
                 df, as_temp = calculateStatMods(df, new_equation, list(new_equation.keys()))
+                if len(as_temp)>0:
+                    pass#This probably shouldn't happen.. raise error?
                 df = calculateNewStat(df, new_equation, s, constant)
             else:
                 leftover_stats.append(s)
@@ -206,9 +212,13 @@ def buildDataframe(equation, group, name, customs):
     while (l>0):
         dfStats, all_stats = calculateCustomStats(dfStats, equation, customs, all_stats)
         #If all_stats didn't change, there were no stats in custom_stats that could be calculated with the known stats
-        if len(all_stats)==l:
-            raise ValueError('Unknown stat in equation')
+        #Actually come up with some other way
         l = len(all_stats)
+    #Calculate the stats we know again, should return empty all_stats
+    all_stats = list(equation.keys())
+    dfStats, all_stats = calculateStatMods(df, equation, all_stats)
+    if len(all_stats)>0:
+        pass#Throw error?
     #Calculate new custom stat
     dfRet = calculateNewStat(dfStats, equation, name, constant)
     return dfRet
