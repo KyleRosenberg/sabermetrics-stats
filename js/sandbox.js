@@ -1,6 +1,7 @@
 let arr_all_stats = [];
-let dic_default_act = { 'const': 1 }
+let dic_default_act = { 'const': 1 };
 let dic_act_stats = $.extend(true, {}, dic_default_act);
+let dic_sav_stats = {};
 
 $(document).ready(function(event) {
     console.log('Sandbox ready!');
@@ -14,6 +15,7 @@ $(document).ready(function(event) {
         onChange: getGroupInfo
     });
     $('#btn_visualize').click(submitStat);
+    $('#btn_savestat').click(saveStat);
     updateActiveStats();
 });
 
@@ -178,7 +180,8 @@ function submitStat() {
         data: {
             'group': $('.stat_bar .ui.fluid.selection.dropdown input')[0].value,
             'equation': JSON.stringify(dic_act_stats),
-            'name': $('#stat_name')[0].value
+            'name': $('#stat_name')[0].value,
+            'customs': JSON.stringify(dic_sav_stats)
         },
         success: function(data) {
             $('.visualization').remove();
@@ -186,4 +189,14 @@ function submitStat() {
         },
         error: console.log
     });
+}
+
+function saveStat(){
+    let equation = dic_act_stats;
+    let name = $('#stat_name')[0].value;
+    dic_sav_stats[name] = equation;
+    if (arr_all_stats.indexOf(name)==-1){
+        arr_all_stats.push(name);
+    }
+    updateAllStats();
 }

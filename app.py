@@ -107,11 +107,17 @@ def visualize():
         return 'Invalid stat group', 400
     if 'equation' not in request.form:
         return 'Equation not provided', 400
-    equation = request.form['equation']
+    equation = json.loads(request.form['equation'])
     if 'name' not in request.form:
         return 'Stat name not provided', 400
     name = request.form['name']
-    dfStats = buildDataframe(json.loads(equation), group, name)
+    if 'customs' not in request.form:
+        return 'Custom stat equations not provided (can be empty)', 400
+    customs = json.loads(request.form['customs'])
+    try:
+        dfStats = buildDataframe(equation, group, name, customs)
+    except ValueError as e:
+        return str(e), 400
     dist = getDistribution(dfStats, name)
     return render_template('visualize.html', result=dist.decode('utf8'))
 
@@ -135,6 +141,7 @@ def calculateNewStat(df, equation, name, constant):
             numerator.append(e)
         else:
             denominator.append(e)
+    print(equation, numerator, denominator, name)
     if len(numerator)==0:
         df['Numerator'] = 1
     else:
@@ -146,20 +153,63 @@ def calculateNewStat(df, equation, name, constant):
     df[name] = (df['Numerator']/df['Denominator'])+constant
     return df
 
-def buildDataframe(equation, group, name):
+def hasAllStats(df, equation):
+    for e in equation.keys():
+        if e=="const":
+            continue
+        sname = re.sub(r'\d+$', '', e)
+        if not sname in df.columns.values:
+            return False
+    return True
+
+def calculateCustomStats(df, equation, customs, all_stats):
+    leftover_stats = []
+    for s in all_stats:
+        sname = re.sub(r'\d+$', '', s)
+        if sname in customs:
+            new_equation = customs[sname]
+            if hasAllStats(df, new_equation):
+                constant = new_equation.pop('const')
+                df, as_temp = calculateStatMods(df, new_equation, list(new_equation.keys()))
+                df = calculateNewStat(df, new_equation, s, constant)
+            else:
+                leftover_stats.append(s)
+        else:
+            pass#This probably shouldn't happen.. raise error?
+    return df, leftover_stats
+
+def calculateStatMods(df, equation, all_stats):
+    for i in range(len(all_stats)-1, -1, -1):
+        e = all_stats[i]
+        sname = re.sub(r'\d+$', '', e)
+        if sname in df:
+            all_stats.pop(i)
+            nums = equation[e]
+            df[e] = nums[0] * (df[sname]**abs(nums[1]))
+    return df, all_stats
+
+def buildDataframe(equation, group, name, customs):
     constant = equation.pop('const')
     df = None
     if group=='p':
-        df = PITCHING_DATA
+        df = PITCHING_DATA.copy(True)
     if group=='b':
-        df = BATTING_DATA
+        df = BATTING_DATA.copy(True)
     if group=='f':
-        df = FIELDING_DATA
-    dfStats = pd.DataFrame(columns=[e for e in equation.keys()])
-    for e in equation.keys():
-        sname = re.sub(r'\d+$', '', e)
-        nums = equation[e]
-        dfStats[e] = nums[0] * (df[sname]**abs(nums[1]))
+        df = FIELDING_DATA.copy(True)
+
+    all_stats = list(equation.keys())
+    #Calculate the stats we know
+    dfStats, all_stats = calculateStatMods(df, equation, all_stats)
+    #Calculate saved custom stats
+    l = len(all_stats)
+    while (l>0):
+        dfStats, all_stats = calculateCustomStats(dfStats, equation, customs, all_stats)
+        #If all_stats didn't change, there were no stats in custom_stats that could be calculated with the known stats
+        if len(all_stats)==l:
+            raise ValueError('Unknown stat in equation')
+        l = len(all_stats)
+    #Calculate new custom stat
     dfRet = calculateNewStat(dfStats, equation, name, constant)
     return dfRet
 
@@ -167,7 +217,7 @@ def getDistribution(df, name):
     dfNoOutliers = df[df[name]<df[name].quantile(0.95)]
     plt.hist(dfNoOutliers[name], density=True)
     plt.title('Custom Stat: ' + name)
-    plt.ylabel('Frequency')
+    plt.ylabel('Relative Frequency')
     plt.xlabel('Stat Value')
 
     from io import BytesIO
