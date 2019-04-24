@@ -1,5 +1,5 @@
 let arr_all_stats = [];
-let dic_default_act = { 'const': 1 };
+let dic_default_act = { 'const': 0 };
 let dic_act_stats = $.extend(true, {}, dic_default_act);
 let dic_sav_stats = {};
 

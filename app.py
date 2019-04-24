@@ -124,7 +124,9 @@ def visualize():
     except ValueError as e:
         return str(e), 400
     dist = getDistribution(dfStats, name)
-    return render_template('visualize.html', result=dist.decode('utf8'))
+    corr = getCorrelations(dfStats, name, group)
+    print(corr)
+    return render_template('visualize.html', result=dist.decode('utf8'), correlation=corr)
 
 @app.route('/')
 @gzipped
@@ -136,6 +138,13 @@ def default():
         top_bar=top_bar,
         stats=PITCHING_DATA.columns.values[7:]
     )
+
+def getCorrelations(df, name, group):
+    ret = ""
+    if group=='p':
+        cfip = df[name].corr(df['FIP'])
+        ret += "Correlation to FIP: " + str(cfip)
+    return ret
 
 def calculateNewStat(df, equation, name, constant):
     numerator = []
@@ -158,6 +167,7 @@ def calculateNewStat(df, equation, name, constant):
     return df
 
 def hasAllStats(df, equation):
+
     for e in equation.keys():
         if e=="const":
             continue
@@ -211,8 +221,7 @@ def buildDataframe(equation, group, name, customs):
     l = len(all_stats)
     while (l>0):
         dfStats, all_stats = calculateCustomStats(dfStats, equation, customs, all_stats)
-        #If all_stats didn't change, there were no stats in custom_stats that could be calculated with the known stats
-        #Actually come up with some other way
+        #TODO: Come up with some way to determine if there are missing stats
         l = len(all_stats)
     #Calculate the stats we know again, should return empty all_stats
     all_stats = list(equation.keys())
@@ -221,11 +230,12 @@ def buildDataframe(equation, group, name, customs):
         pass#Throw error?
     #Calculate new custom stat
     dfRet = calculateNewStat(dfStats, equation, name, constant)
-    return dfRet
+    #Remove outliers
+    dfNoOutliers = dfRet[(dfRet[name]<dfRet[name].quantile(0.95))&(dfRet[name]>dfRet[name].quantile(0.05))]
+    return dfNoOutliers
 
 def getDistribution(df, name):
-    dfNoOutliers = df[df[name]<df[name].quantile(0.95)]
-    plt.hist(dfNoOutliers[name], density=True)
+    plt.hist(df[name], density=True)
     plt.title('Custom Stat: ' + name)
     plt.ylabel('Relative Frequency')
     plt.xlabel('Stat Value')

@@ -40,6 +40,7 @@ h1, h2, h3, h4, h5, h6 {
     background-color: rgb(226, 226, 226);
     float:left;
     padding: 1%;
+    overflow-y: scroll;
 }
 
 .stat_bar h2, .active_bar h2{
@@ -75,6 +76,7 @@ h1, h2, h3, h4, h5, h6 {
     background-color: rgb(226, 226, 226);
     float:right;
     padding: 1%;
+    overflow-y: scroll;
 }
 
 .active_bar .ui.input{
@@ -89,6 +91,7 @@ h1, h2, h3, h4, h5, h6 {
     position: absolute;
     padding-top:2%;
     text-align: center;
+    overflow-y: scroll;
 }
 
 .equation_box{
