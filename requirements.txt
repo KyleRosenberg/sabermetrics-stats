@@ -6,3 +6,4 @@ psycopg2==2.7.6.1
 requests==2.21.0
 pybaseball==1.0.7
 matplotlib==3.0.3
+scipy==1.2.1
