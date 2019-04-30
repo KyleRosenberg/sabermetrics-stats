@@ -12,22 +12,24 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import pandas as pd
+from scipy.stats import linregress
 
 def rightData(df, group=None):
-    dfRet = df.loc[df['yearID']>2006].dropna()
+    dfRet = df.loc[df['yearID']>=2014].dropna()
     if group=='p':
         dfRet['FIP'] = (13*dfRet['HR'] + 3*(dfRet['BB']+dfRet['IBB']) - 2*dfRet['SO'])/(dfRet['IPouts']/3) + 3.2
     if group=='b':
         dfRet['1B'] = dfRet['H'] - dfRet['2B'] - dfRet['3B'] - dfRet['HR']
         dfRet['wOBA'] = (0.69*(dfRet['BB']-dfRet['IBB']) + 0.72*dfRet['HBP'] + 0.89*dfRet['1B'] + 1.27*dfRet['2B'] + 1.62*dfRet['3B'] + 2.1*dfRet['HR'])/(dfRet['AB']+dfRet['BB']-dfRet['IBB']+dfRet['SF']+dfRet['HBP'])
+    if group=='t':
+        dfRet = dfRet[['teamID', 'yearID', 'W']]
     return dfRet
 
 PITCHING_DATA = rightData(pitching(), 'p')
 BATTING_DATA = rightData(batting(), 'b')
-FIELDING_DATA = rightData(fielding())
-TEAM_DATA = rightData(teams())
+TEAM_DATA = rightData(teams(), 't')
 
-GROUPS = ['p', 'b', 'f']
+GROUPS = ['p', 'b']
 
 app = Flask(__name__, static_url_path='/static')
 app.config['HTML_FOLDER'] = 'templates/'
@@ -98,8 +100,6 @@ def groupinfo():
         return jsonify(PITCHING_DATA.columns.values.tolist()[7:])
     if group=='b':
         return jsonify(BATTING_DATA.columns.values.tolist()[5:])
-    if group=='f':
-        return jsonify(FIELDING_DATA.columns.values.tolist()[6:])
     return 'Something went wrong', 400
 
 @app.route('/visualize', methods=['POST'])
@@ -119,14 +119,15 @@ def visualize():
     if 'customs' not in request.form:
         return 'Custom stat equations not provided (can be empty)', 400
     customs = json.loads(request.form['customs'])
+    names = []
     try:
-        dfStats = buildDataframe(equation, group, name, customs)
+        dfStats, names = buildDataframe(equation, group, name, customs)
     except ValueError as e:
         return str(e), 400
-    dist = getDistribution(dfStats, name)
-    corr = getCorrelations(dfStats, name, group)
-    print(corr)
-    return render_template('visualize.html', result=dist.decode('utf8'), correlation=corr)
+    dist = getDistribution(dfStats, names)
+    corrs = getCorrelations(dfStats, names)
+    resid = getResiduals(dfStats, names, corrs)
+    return render_template('visualize.html', result=dist.decode('utf8'), residuals=resid.decode('utf8'))
 
 @app.route('/')
 @gzipped
@@ -139,12 +140,13 @@ def default():
         stats=PITCHING_DATA.columns.values[7:]
     )
 
-def getCorrelations(df, name, group):
-    ret = ""
-    if group=='p':
-        cfip = df[name].corr(df['FIP'])
-        ret += "Correlation to FIP: " + str(cfip)
-    return ret
+def getCorrelations(df, names):
+    corrs = []
+    x_name = names[0]
+    y_names = names[1:]
+    for n in y_names:
+        corrs.append({'name':n, 'val':df[x_name].corr(df[n])})
+    return corrs
 
 def calculateNewStat(df, equation, name, constant):
     numerator = []
@@ -207,12 +209,13 @@ def calculateStatMods(df, equation, all_stats):
 def buildDataframe(equation, group, name, customs):
     constant = equation.pop('const')
     df = None
+    names = [name]
     if group=='p':
         df = PITCHING_DATA.copy(True)
+        names.append('FIP')
     if group=='b':
         df = BATTING_DATA.copy(True)
-    if group=='f':
-        df = FIELDING_DATA.copy(True)
+        names.append('wOBA')
 
     all_stats = list(equation.keys())
     #Calculate the stats we know
@@ -232,21 +235,59 @@ def buildDataframe(equation, group, name, customs):
     dfRet = calculateNewStat(dfStats, equation, name, constant)
     #Remove outliers
     dfNoOutliers = dfRet[(dfRet[name]<dfRet[name].quantile(0.95))&(dfRet[name]>dfRet[name].quantile(0.05))]
-    return dfNoOutliers
+    return dfNoOutliers, names
 
-def getDistribution(df, name):
-    plt.hist(df[name], density=True)
-    plt.title('Custom Stat: ' + name)
+def getDistribution(df, names):
+    plt.clf()
+    for n in names:
+        a = 1/len(names)/2
+        if n==names[0]:
+            a = 1
+        plt.hist(df[n], density=True, alpha=a, label=n)
+    dfTeams = TEAM_DATA.copy(True)
+    dfTeams['W_normalized'] = (df[names[0]].max()-df[names[0]].min())*(dfTeams['W']-dfTeams['W'].min())/(dfTeams['W'].max() - dfTeams['W'].min())
+    plt.hist(dfTeams['W_normalized'], density=True, alpha=1/len(names)/2, label='Team Wins (Normalized)')
+    plt.title(names[0] + ' Distribution')
     plt.ylabel('Relative Frequency')
     plt.xlabel('Stat Value')
+    plt.legend()
 
+    ret = getPlotPic()
+    plt.clf()
+    return ret
+
+def getResiduals(df, names, corrs):
+    if len(names)<2:
+        raise ValueError('Must have at least 2 columns to compare')
+    plt.clf()
+    x_name = names[0]
+    for c in corrs:
+        plt.scatter(df[x_name], df[c['name']], alpha=1/len(corrs)/2, label=(c['name'] + ': %.3f' % c['val']))
+        slope, intercept, r_value, p_value, std_err = linregress(df[x_name], df[c['name']])
+        plt.plot(df[x_name], intercept + slope*df[x_name], label=c['name'] + ' Best Fit')
+    comb = pd.merge(TEAM_DATA, df.groupby(['yearID', 'teamID']).mean(), on=['yearID', 'teamID'])
+    if 'W' in df.columns.values:
+        comb['W'] = comb['W_x']
+    comb['W_normalized'] = (df[x_name].max()-df[x_name].min())*(comb['W']-comb['W'].min())/(comb['W'].max() - comb['W'].min())
+    plt.scatter(comb[x_name], comb['W_normalized'], alpha=1/len(corrs)/2, label=('Team Wins (Normalized): %.3f' % comb[x_name].corr(comb['W_normalized'])))
+    slope, intercept, r_value, p_value, std_err = linregress(comb[x_name], comb['W_normalized'])
+    plt.plot(comb[x_name], intercept + slope*comb[x_name], label='Wins Best Fit')
+    plt.xlabel(names[0] + ' Value')
+    plt.ylabel('Comparison Stat Values')
+    plt.title(names[0] + ' Correlation')
+    plt.legend()
+
+    ret = getPlotPic()
+    plt.clf()
+    return ret
+
+def getPlotPic():
     from io import BytesIO
     figfile = BytesIO()
     plt.savefig(figfile, format='png')
     figfile.seek(0)
     import base64
     figdata_png = base64.b64encode(figfile.getvalue())
-    plt.clf()
     return figdata_png
 
 if __name__ == '__main__':
