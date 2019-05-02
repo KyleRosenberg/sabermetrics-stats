@@ -13,7 +13,5 @@ The server is written in python and uses Flask to handle the endpoints and HTTP 
 The first thing the server needs to do at the */visualize* endpoint, other than validating the inputs, is build the dataframe with the custom stats. The algorithm to do this is basically a cycle of two ideas. The first idea is that we should calculate the all stats from the equation that we can and put them in the dataframe. For example, the equation dictionary for FIP might have the key "HR1" with the value [13, 1]. Since the dataframe already has a column "HR", we can calculate "HR1" to be 13\*HR^1. The second idea is that if any of the stats in the equation were themselves custom stats, we need to calculate those before we can calculate the "main" stat. To do this, we look at the dictionary of custom stats, look at all the equations, and calculate any that we can (meaning we have all the parts of the equation calculated already). If after these two steps there are no more stats that need to be calculated for the final equation, we can calculate it and put it in the dataframe. If not we can just repeat the two steps until that condition is satisfied. 
 The rest of the servers job is just making the plots. By default, the custom stat is plotted on a histogram alongside FIP and a normalized distribution of team wins. The same is also done with a scatter plot, where the custom stat is the feature predicting FIP and team wins. The scatter plot also contains the correlation coefficients, and best fit lines. Then, some code I found on stackoverflow is used to convert the plots into something that can be displayed in an HTML image tag.
 
-## Video  
-<a href="http://www.youtube.com/watch?feature=player_embedded&v=otgyADJT8AU
-" target="_blank"><img src="http://img.youtube.com/vi/otgyADJT8AU/0.jpg" 
-alt="IMAGE ALT TEXT HERE" width="240" height="180" border="10" /></a>
+## URL  
+https://sabermetrics-stats.herokuapp.com
